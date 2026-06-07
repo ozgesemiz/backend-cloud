@@ -1,0 +1,28 @@
+name: CD
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy to AWS EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ secrets.AWS_USER }}
+          key: ${{ secrets.AWS_KEY }}
+          script: |
+            cd /home/ubuntu/backend-cloud || git clone https://github.com/ozgesemiz/backend-cloud.git /home/ubuntu/backend-cloud
+            cd /home/ubuntu/backend-cloud
+            git pull origin main
+            docker build -t backend-cloud .
+            docker stop backend-cloud 2>/dev/null || true
+            docker rm backend-cloud 2>/dev/null || true
+            docker run -d --name backend-cloud -p 8080:8080 backend-cloud
+            echo "Deployed successfully"
